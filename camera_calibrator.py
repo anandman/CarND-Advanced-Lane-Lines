@@ -96,6 +96,45 @@ def undistort_image(img, mtx, dist, newcameramtx=None, roi=None):
     return dst
 
 
+def get_birdseye_transforms():
+    """
+    generate perspective transform matrices for forward->birdseye & birdseye->forward
+    :return m, minv: 
+    """
+
+    # TODO - calculate this based on camera calibration data
+    # fixed for this car camera angle
+    src = np.float32([[270, 665], [670, 665], [645, 465], [570, 465]])
+    # focus on only lane lines all the way up to the top
+    # dst = np.float32([[270, 665], [670, 665], [670, 465], [270, 465]])
+    # lane lines only but crop out horizon, sky, etc.
+    # dst = np.float32([[270, 665], [670, 665], [670, 0], [270, 0]])
+    # see entire image
+    # dst = np.float32([[570, 665], [645, 665], [645, 465], [570, 465]])
+    # see entire image without horizon, sky, etc.
+    dst = np.float32([[570, 665], [645, 665], [645, 0], [570, 0]])
+
+    m = cv2.getPerspectiveTransform(src, dst)
+    minv = cv2.getPerspectiveTransform(dst, src)
+
+    return m, minv
+
+
+def get_world_resolutions():
+    """
+    return dots per meter in X & Y directions
+    :return dpmx, dpmy: 
+    """
+
+    # TODO: calculate this based on camera calibration data
+    # use lane width of 12ft to calculate X dots per meter
+    dpmx = 12 * 0.3048 / 140     # 12ft * 0.3048 m/ft / 140 pixels measured on screen across multiple sample pictures
+    # use dashed lane length of 10ft to calculate Y dots per meter
+    dpmy = 10 * 0.3048 / 110     # 10ft * 0.3048 m/ft / 110 pixels measured on screen across multiple sample pictures
+
+    return dpmx, dpmy
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calibrate Camera Distortion')
     parser.add_argument('--caldir', type=str, metavar="DIRECTORY", default="camera_cal",
