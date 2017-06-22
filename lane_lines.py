@@ -4,7 +4,6 @@ Lane Line Detector
 """
 
 import os
-import sys
 import imghdr
 import numpy as np
 import cv2
@@ -105,6 +104,7 @@ def color_threshold_lanes(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
 
+    # TODO: play with which morphology operations we use and where to place them in the pipeline
     # create structuring elements
     se_10x10ellipse = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(10, 10))
     se_2x2rect = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(2, 2))
@@ -176,6 +176,7 @@ def gradient_threshold_lanes(img, abs_kernel=3, mag_kernel=3, dir_kernel=3,
     :return sobel_output: 
     """
 
+    # TODO: play with which morphology operations we use and where to place them in the pipeline
     # create structuring elements
     se_tophat_ellipse = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(tophat_ksize, tophat_ksize))
     se_erode_rect = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(erode_ksize, erode_ksize))
@@ -299,6 +300,7 @@ def find_lane_lines(img, last_left_fits, last_right_fits, isVideo=False, debug=F
         last_left_fit = [0, 0, 0]
         last_right_fit = [0, 0, 0]
 
+    # TODO: find lanes based on previous frame and new detection and determine which is more likely correct
     # if working on video and we have valid coefficients from the last iteration, use those to find new window
     if isVideo and any(c != 0 for c in last_left_fit) and any(c != 0 for c in last_right_fit):
         # search in a margin around the previous line position
@@ -348,6 +350,7 @@ def find_lane_lines(img, last_left_fits, last_right_fits, isVideo=False, debug=F
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds]
 
+    # TODO: use RANSAC spline fitting instead of simple polyfit to better ignore outliers
     if len(leftx) is 0:
         if all(c == 0 for c in last_left_fit):
             # eek! we have no lane line!
@@ -372,6 +375,7 @@ def find_lane_lines(img, last_left_fits, last_right_fits, isVideo=False, debug=F
         # fit a second order polynomial to rightside
         right_fit = np.polyfit(righty, rightx, 2)
 
+    # TODO: handle lane merges or exits more gracefully rather than toss them out
     # take derivative of left & right polynomial curves to see if they are roughly the same at a few points
     yofs = 0
     for y in [0.25 * img.shape[0], 0.50 * img.shape[0], img.shape[0]]:
@@ -393,6 +397,7 @@ def find_lane_lines(img, last_left_fits, last_right_fits, isVideo=False, debug=F
     # push the current polynomial coefficients onto front of queue
     # since we defined the np.array with a certain size,
     # the nth set of coefficients effectively drops off the back of queue
+    # np.roll is computationally faster than using deque's, even though we want FIFO and nor ring buffer
     last_left_fits = np.roll(last_left_fits, 1, axis=0)
     last_right_fits = np.roll(last_right_fits, 1, axis=0)
     last_left_fits[0] = left_fit
@@ -400,6 +405,7 @@ def find_lane_lines(img, last_left_fits, last_right_fits, isVideo=False, debug=F
     # smooth over multiple frames if video
     if isVideo:
         # take the average of the last few frames
+        # TODO: consider using weighted average of frames (i.e. use higher weights for more recent frames)
         avg_left_fit = np.mean(last_left_fits, axis=0)
         avg_right_fit = np.mean(last_right_fits, axis=0)
     else:
@@ -508,7 +514,7 @@ def detect_lane_lines(img, mtx, dist, to_birdseye, to_forward, dpmx, dpmy, isVid
     # color threshold image
     cth = color_threshold_lanes(bey)
 
-    # going to ignore Sobel as it's just not very effective but maybe would be with lots more tuning
+    # TODO: tune Sobel thresholding and/or add Hough transform; currently, Sobel just adds unwanted noise
     use_sobel = False
 
     if use_sobel:
