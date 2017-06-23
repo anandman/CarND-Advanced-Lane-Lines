@@ -1,10 +1,10 @@
-##Advanced Lane Lines
+## Advanced Lane Lines
 
-###OpenCV-based traffic lane line detection algorithm
+### OpenCV-based traffic lane line detection algorithm
 
 *I plan to add the vehicle detection project to this code base so one code base can show both.*
 
-###Project Description
+### Project Description
 ---
 
 **The goals / steps of this project are the following:**
@@ -18,7 +18,7 @@
 - Warp the detected lane boundaries back onto the original image.
 - Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
-###Files & Running the Code
+### Files & Running the Code
 ---
 **The project includes the following files:**
 
@@ -66,7 +66,7 @@ python lane_lines.py [--cal FILENAME] [--display] [--outdir OUTDIR] INFILE [INFI
   --outdir OUTDIR  output directory (DEFAULT: ".")
 ```
   
-###Camera Calibration
+### Camera Calibration
 ---
 
 The camera calibration module [camera_calibrator.py](camera_calibrator.py) has many helper functions that can be used to get data to map from what the camera sees to the real world (and vice versa in some cases). Currently, this includes:
@@ -80,7 +80,7 @@ For #1 above, the algorithm is to use multiple checkerboard images and find the 
 
 For #2 & #3, they are hardcoded based on data measured from sample images. In future work, this can be automated by getting data from known calibration test images.
 
-###Lane Line Detection Pipeline
+### Lane Line Detection Pipeline
 ---
 
 The lane line detection module [lane_lines.py](lane_lines.py) consists of the following steps:
@@ -105,7 +105,7 @@ For this test image and output, the intermediate pipeline images, with some debu
 Here is the output of [lane_lines.py](lane_lines.py) on the sample video. Click on the previews to see the full video.
 <a href="project_video.mp4"><img src="examples/project_video.gif"></a> <a href="output_images/project_video.mp4"><img src="examples/project_video_out.gif"></a>
 
-###Discussion
+### Discussion
 ---
 
 Though this pipeline works well for the test images and the first sample video, it is not robust. Here are some issues that will need to be addressed. A lot of these are listed in the TODO comments in the code.
