@@ -1,5 +1,6 @@
 ##Advanced Lane Lines
 ###OpenCV-based traffic lane line detection algorithm
+*I plan to add the vehicle detection project to this code base so one code base can show both.*
 
 ###Project Description
 ---
