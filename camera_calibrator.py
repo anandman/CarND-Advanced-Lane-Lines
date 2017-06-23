@@ -157,6 +157,7 @@ if __name__ == "__main__":
     # calibrate the camera
     mtx, dist, newcameramtx, roi = calibrate_camera(objpoints, imgpoints, args.width, args.height)
 
+    # TODO: save/load the birdseye and distance transform data in the future
     # save camera calibration data for future use
     save_camera_calibration(args.npz, mtx, dist, newcameramtx, roi)
 
