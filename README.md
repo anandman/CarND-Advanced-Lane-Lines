@@ -105,7 +105,7 @@ For this test image and output, the intermediate pipeline images, with some debu
 Here is the output of [lane_lines.py](lane_lines.py) on the sample video. Click on the previews to see the full video.
 <a href="project_video.mp4"><img src="examples/project_video.gif"></a> <a href="output_images/project_video.mp4"><img src="examples/project_video_out.gif"></a>
 
-### Discussion
+### Issues & Future Work
 ---
 
 Though this pipeline works well for the test images and the first sample video, it is not robust. Here are some issues that will need to be addressed. A lot of these are listed in the TODO comments in the code.
