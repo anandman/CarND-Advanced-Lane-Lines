@@ -254,8 +254,8 @@ if __name__ == "__main__":
                         help='which detection method to use (DEFAULT: darknet')
     parser.add_argument('--model', type=str, metavar="FILENAME", default="yad2k/model_data/tiny-yolo-voc.h5",
                         help='filename with YOLO model and weights (DEFAULT: yad2k/model_data/tiny-yolo-voc.h5)')
-    parser.add_argument('--anchors', type=str, metavar="FILENAME", default="yad2k/model_data/tiny-yolo_anchors.txt",
-                        help='filename with YOLO anchors (DEFAULT: yad2k/model_data/tiny-yolo_anchors.txt)')
+    parser.add_argument('--anchors', type=str, metavar="FILENAME", default="yad2k/model_data/tiny-yolo-voc_anchors.txt",
+                        help='filename with YOLO anchors (DEFAULT: yad2k/model_data/tiny-yolo-voc_anchors.txt)')
     parser.add_argument('--classes', type=str, metavar="FILENAME", default="yad2k/model_data/pascal_classes.txt",
                         help='filename with YOLO anchors (DEFAULT: yad2k/model_data/pascal_classes.txt)')
     parser.add_argument('--display', action="store_true", help='display augmented images/video')
