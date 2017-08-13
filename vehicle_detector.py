@@ -298,8 +298,8 @@ if __name__ == "__main__":
     # open TF session
     sess = K.get_session()  # TODO: Remove dependence on Tensorflow session.
 
-    net = darknet.load_net(b"darknet/tiny-yolo-voc.cfg", b"darknet/tiny-yolo-voc.weights", 0)
-    meta = darknet.load_meta(b"darknet/voc.data")
+    net = darknet.load_net(b"darknet/cfg/tiny-yolo-voc.cfg", b"darknet/tiny-yolo-voc.weights", 0)
+    meta = darknet.load_meta(b"darknet/cfg/voc.data")
 
     for infile in args.infiles:
         print("Processing {0}...".format(infile))
