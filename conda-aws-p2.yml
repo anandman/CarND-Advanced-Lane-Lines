@@ -212,6 +212,7 @@ dependencies:
   - backports.shutil-get-terminal-size==1.0.0
   - et-xmlfile==1.0.1
   - imageio==2.1.2
+  - imutils==0.4.3
   - ipython-genutils==0.1.0
   - jupyter-client==4.4.0
   - jupyter-console==5.0.0
