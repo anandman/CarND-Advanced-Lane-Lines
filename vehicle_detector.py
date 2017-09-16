@@ -123,7 +123,8 @@ def init_keras(weights_file, classes_file, anchors_file):
     return model, classes, anchors
 
 
-def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=False, debug=False, display=False):
+def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=False, returnOverlay=False,
+                          debug=False, display=False):
     """
     takes in an RGB image, tries to detect vehicles, and augments image with visualization of detected vehicles
     :param img:
@@ -134,6 +135,7 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
     :param classes:
     :param anchors:
     :param isVideo:
+    :param returnOverlay:
     :param display:
     :return retimg:
     """
@@ -141,7 +143,10 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
     # undistort image
     dst = undistort_image(img, mtx, dist)
 
-    box_img = dst
+    if returnOverlay:
+        box_img = np.zeros_like(dst)
+    else:
+        box_img = dst
 
     # Check if model is fully convolutional, assuming channel last order.
     model_image_size = model.layers[0].input_shape[1:3]
