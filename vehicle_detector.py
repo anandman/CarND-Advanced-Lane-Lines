@@ -2,20 +2,19 @@
 Vehicle Detector
     Will detect and add visualizations around vehicles to static image or a video
 
-    To setup YAD2K, follow these directions...
-        1) git clone https://github.com/allanzelener/yad2k.git
-        2) cd yad2k
-        3) wget https://github.com/pjreddie/darknet/raw/master/cfg/tiny-yolo-voc.cfg
-        4) wget https://pjreddie.com/media/files/tiny-yolo-voc.weights
-        5) python yad2k.py tiny-yolo-voc.cfg tiny-yolo-voc.weights model_data/tiny-yolo-voc.h5
-
     To setup darknet, follow these directions...
         1) git clone https://github.com/pjreddie/darknet
         2) cd darknet
         3) edit Makefile if using GPU, CUDNN, etc.
         4) make
         5) wget https://pjreddie.com/media/files/tiny-yolo-voc.weights
-        6) edit cfg/voc.data to add "darknet" to "data/voc.names"
+        6) edit cfg/voc.data to change "data/voc.names" to "darknet/data/voc.names"
+
+    To setup YAD2K, follow these directions...
+        1) Setup darknet as described above
+        2) git clone https://github.com/allanzelener/yad2k.git
+        3) cd yad2k
+        4) python yad2k.py ../darknet/cfg/tiny-yolo-voc.cfg ../darknet/tiny-yolo-voc.weights model_data/tiny-yolo-voc.h5
 """
 
 import os
@@ -37,7 +36,7 @@ from yolo_keras import *
 
 
 # some parameters to use to filter bounding boxes
-SCORE_THRESHOLD = 0.35
+SCORE_THRESHOLD = 0.4
 NMS_THRESHOLD = 0.2
 CLASSES_TO_SHOW = ['bus', 'car', 'motorbike', 'truck']
 
