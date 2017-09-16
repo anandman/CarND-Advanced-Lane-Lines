@@ -415,7 +415,8 @@ def add_curvature_and_offset(img, left_fit, right_fit, dpmx, dpmy):
     return img
 
 
-def detect_lane_lines(img, mtx, dist, to_birdseye, to_forward, dpmx, dpmy, isVideo=False, debug=False, display=False):
+def detect_lane_lines(img, mtx, dist, to_birdseye, to_forward, dpmx, dpmy, isVideo=False, returnOverlay=False,
+                      debug=False, display=False):
     """
     takes in an RGB image, tries to find lane lines, and augments image with visualization of lane lines
     :param img: 
@@ -425,7 +426,8 @@ def detect_lane_lines(img, mtx, dist, to_birdseye, to_forward, dpmx, dpmy, isVid
     :param to_forward: 
     :param dpmx: 
     :param dpmy: 
-    :param isVideo: 
+    :param isVideo:
+    :param returnOverlay:
     :param display: 
     :return retimg: 
     """
@@ -460,11 +462,15 @@ def detect_lane_lines(img, mtx, dist, to_birdseye, to_forward, dpmx, dpmy, isVid
                         isVideo=isVideo, debug=debug)
 
     lnw = cv2.warpPerspective(lnl, to_forward, (dst.shape[1], dst.shape[0]), flags=cv2.INTER_LINEAR)
-    lna = cv2.addWeighted(dst, 1, lnw, 0.3, 0)
 
-    coi = add_curvature_and_offset(lna, _global_left_fits[0], _global_right_fits[0], dpmx, dpmy)
+    coi = add_curvature_and_offset(lnw, _global_left_fits[0], _global_right_fits[0], dpmx, dpmy)
 
-    retimg = coi
+    lna = cv2.addWeighted(dst, 1, coi, 0.3, 0)
+
+    if returnOverlay:
+        retimg = coi
+    else:
+        retimg = lna
 
     if debug or display:
         # display debug images
