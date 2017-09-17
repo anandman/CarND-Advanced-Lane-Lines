@@ -166,7 +166,7 @@ The vehicle detection module [vehicle_detector.py](vehicle_detector.py) consists
 - overlay visual display of bounding boxes onto original image
 - output the image or video
 
-For this test image and output, the intermediate pipeline images, with some debug information, is shown below.
+A test image and output are shown below.
 
 <img src="test_images/test6.jpg" width="400" height="225"> <img src="output_images/vd/test6.jpg" width="400" height="225">
 
