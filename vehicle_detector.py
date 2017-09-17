@@ -436,7 +436,7 @@ if __name__ == "__main__":
     parser.add_argument('--cal', type=str, metavar="FILENAME", default="camera_cal.npz",
                         help='filename with camera calibration matrix & distortion coefficients (DEFAULT: camera_cal.npz)')
     parser.add_argument('--method', type=str, choices=['yad2k', 'darknet', 'keras'], default='darknet',
-                        help='which detection method to use (DEFAULT: darknet')
+                        help='which detection method to use (DEFAULT: keras')
     parser.add_argument('--cfg', type=str, metavar="FILENAME", default="darknet/cfg/tiny-yolo-voc.cfg",
                         help='Darknet configuration file (DEFAULT: darknet/cfg/tiny-yolo-voc.cfg)')
     parser.add_argument('--meta', type=str, metavar="FILENAME", default="darknet/cfg/voc.data",
