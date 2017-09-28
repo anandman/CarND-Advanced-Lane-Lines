@@ -120,8 +120,9 @@ def prediction_bboxes(netout, class_names, anchors, prob_threshold, nms_threshol
                 # last 20 weights for class likelihoods
                 classes = netout[0, row, col, b, 5:]
                 box.probs = softmax(classes) * box.c
-                box.probs *= box.probs > prob_threshold
 
+                # filter out boxes that don't meet threshold
+                box.probs *= box.probs > prob_threshold
                 boxes.append(box)
 
     # suppress non-maximal boxes

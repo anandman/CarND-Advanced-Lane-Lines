@@ -36,7 +36,11 @@ from yolo_keras import *
 
 
 # some parameters to use to filter bounding boxes
-SCORE_THRESHOLD = 0.4
+CROP_YMIN = 350
+CROP_YMAX = 719
+CROP_XMIN = 500
+CROP_XMAX = 1279
+SCORE_THRESHOLD = 0.5
 NMS_THRESHOLD = 0.2
 CLASSES_TO_SHOW = ['bus', 'car', 'motorbike', 'truck']
 
@@ -148,19 +152,22 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
     else:
         box_img = dst
 
-    # Check if model is fully convolutional, assuming channel last order.
+    # crop to only right side of road area
+    dst_cropped = dst[CROP_YMIN:CROP_YMAX, CROP_XMIN:CROP_XMAX, :]
+
+    # check if model is fully convolutional, assuming channel last order.
     model_image_size = model.layers[0].input_shape[1:3]
     is_fixed_size = model_image_size != (None, None)
 
     if is_fixed_size:  # TODO: When resizing we can use minibatch input.
-        resized_image = cv2.resize(dst, model_image_size)
+        resized_image = cv2.resize(dst_cropped, model_image_size)
         image_data = np.array(resized_image, dtype='float32')
     else:
         # Due to skip connection + max pooling in YOLO_v2, inputs must have
         # width and height as multiples of 32.
-        new_image_size = (dst.width - (dst.width % 32),
-                          dst.height - (dst.height % 32))
-        resized_image = cv2.resize(dst, new_image_size)
+        new_image_size = (dst_cropped.width - (dst_cropped.width % 32),
+                          dst_cropped.height - (dst_cropped.height % 32))
+        resized_image = cv2.resize(dst_cropped, new_image_size)
         image_data = np.array(resized_image, dtype='float32')
 
     image_data /= 255.
@@ -168,6 +175,8 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
 
     # run image through model
     netout = model.predict(image_data)
+
+    # extract bounding boxes and filter based on thresholds and classes
     bboxes = prediction_bboxes(netout, classes, anchors, SCORE_THRESHOLD, NMS_THRESHOLD)
 
     for bbox in bboxes:
@@ -187,11 +196,17 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
         top = (box[1] - box[3] / 2);
         bottom = (box[1] + box[3] / 2);
 
-        # scale up boxes to original image size
-        left *= dst.shape[1] / model_image_size[0]
-        right *= dst.shape[1] / model_image_size[0]
-        top *= dst.shape[0] / model_image_size[1]
-        bottom *= dst.shape[0] / model_image_size[1]
+        # scale up boxes to cropped image size
+        left *= dst_cropped.shape[1] / model_image_size[0]
+        right *= dst_cropped.shape[1] / model_image_size[0]
+        top *= dst_cropped.shape[0] / model_image_size[1]
+        bottom *= dst_cropped.shape[0] / model_image_size[1]
+
+        # shift boxes from cropped to original image
+        left += CROP_XMIN
+        right += CROP_XMIN
+        top += CROP_YMIN
+        bottom += CROP_YMIN
 
         top = max(0, np.floor(top + 0.5).astype('int32'))
         left = max(0, np.floor(left + 0.5).astype('int32'))
@@ -435,7 +450,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--cal', type=str, metavar="FILENAME", default="camera_cal.npz",
                         help='filename with camera calibration matrix & distortion coefficients (DEFAULT: camera_cal.npz)')
-    parser.add_argument('--method', type=str, choices=['yad2k', 'darknet', 'keras'], default='darknet',
+    parser.add_argument('--method', type=str, choices=['yad2k', 'darknet', 'keras'], default='keras',
                         help='which detection method to use (DEFAULT: keras')
     parser.add_argument('--cfg', type=str, metavar="FILENAME", default="darknet/cfg/tiny-yolo-voc.cfg",
                         help='Darknet configuration file (DEFAULT: darknet/cfg/tiny-yolo-voc.cfg)')
