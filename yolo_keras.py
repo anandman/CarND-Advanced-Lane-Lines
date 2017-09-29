@@ -141,14 +141,19 @@ def non_maximal_suppresion(boxes, nms_threshold):
     :return nms_boxes: array of class BoundBox
     """
 
+    # sort the boxes by confidence score, in the descending order, to keep the highest confidence box that meets NMS
+    sorted_indices = list(reversed(np.argsort([box.prob for box in boxes])))
+
     # suppress non-maximal boxes based on IoU threshold
-    for i in range(len(boxes)):
-        if boxes[i].prob == 0:
+    for i in range(len(sorted_indices)):
+        index_i = sorted_indices[i]
+        if boxes[index_i].prob == 0:
             continue
         else:
-            for j in range(i + 1, len(boxes)):
-                if boxes[i].iou(boxes[j]) >= nms_threshold:
-                    boxes[j].prob = 0
+            for j in range(i + 1, len(sorted_indices)):
+                index_j = sorted_indices[j]
+                if boxes[index_i].iou(boxes[index_j]) >= nms_threshold:
+                    boxes[index_j].prob = 0
 
     # only return those that haven't been suppressed
     nms_boxes = [b for b in boxes if b.prob > 0]
