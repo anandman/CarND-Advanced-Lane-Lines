@@ -36,9 +36,9 @@ from yolo_keras import *
 
 
 # some parameters to use to filter bounding boxes
-CROP_YMIN = 350
+CROP_YMIN = 300
 CROP_YMAX = 719
-CROP_XMIN = 500
+CROP_XMIN = 0
 CROP_XMAX = 1279
 SCORE_THRESHOLD = 0.5
 NMS_THRESHOLD = 0.2
@@ -152,7 +152,7 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
     else:
         box_img = dst
 
-    # crop to only right side of road area
+    # crop to road area
     dst_cropped = dst[CROP_YMIN:CROP_YMAX, CROP_XMIN:CROP_XMAX, :]
 
     # check if model is fully convolutional, assuming channel last order.
