@@ -177,24 +177,22 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
     netout = model.predict(image_data)
 
     # extract bounding boxes and filter based on thresholds and classes
-    bboxes = prediction_bboxes(netout, classes, anchors, SCORE_THRESHOLD, NMS_THRESHOLD)
+    pboxes = prediction_bboxes(netout, classes, anchors, SCORE_THRESHOLD)
+    boxes = non_maximal_suppresion(pboxes, NMS_THRESHOLD)
 
-    for bbox in bboxes:
-        predicted_class = bbox[0]
-        box = bbox[1]
-        score = bbox[2]
-
+    for box in boxes:
         # only show if prediction is in CLASSES_TO_SHOW
-        if predicted_class not in CLASSES_TO_SHOW:
+        if box.cn not in CLASSES_TO_SHOW:
+            print("[INFO] detected class ", box.cn)
             continue
 
-        label = '{} {:.2f}'.format(predicted_class, score)
+        label = '{} {:.2f}'.format(box.cn, box.prob)
 
         # convert bounding box to coordinates
-        left = (box[0] - box[2] / 2);
-        right = (box[0] + box[2] / 2);
-        top = (box[1] - box[3] / 2);
-        bottom = (box[1] + box[3] / 2);
+        left = (box.x - box.w / 2)
+        right = (box.x + box.w / 2)
+        top = (box.y - box.h / 2)
+        bottom = (box.y + box.h / 2)
 
         # scale up boxes to cropped image size
         left *= dst_cropped.shape[1] / model_image_size[0]

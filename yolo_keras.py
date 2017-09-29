@@ -6,9 +6,10 @@ import cv2
 
 
 class BoundBox:
-    def __init__(self, class_num):
-        self.x, self.y, self.w, self.h, self.c = 0., 0., 0., 0., 0.
-        self.probs = np.zeros((class_num,))
+    def __init__(self):
+        self.x, self.y, self.w, self.h = 0., 0., 0., 0.
+        self.prob = 0.
+        self.cn = "none"
 
     def iou(self, box):
         intersection = self.intersect(box)
@@ -81,7 +82,7 @@ def load_weights(model, weights_file):
                 conv_layer.set_weights([kernel])
 
 
-def prediction_bboxes(netout, class_names, anchors, prob_threshold, nms_threshold):
+def prediction_bboxes(netout, class_names, anchors, prob_threshold):
     """
     takes network output and returns set of bounding boxes
     :param netout:
@@ -89,7 +90,7 @@ def prediction_bboxes(netout, class_names, anchors, prob_threshold, nms_threshol
     :param class_names:
     :param prob_threshold:
     :param nms_threshold:
-    :return bboxes: array of class, box (xmin, xmax, ymin, ymax), and probability
+    :return boxes: array of class BoundBox
     """
 
     # fixed for now - eventually read from .cfg file
@@ -106,51 +107,53 @@ def prediction_bboxes(netout, class_names, anchors, prob_threshold, nms_threshol
     for row in range(GRID_H):
         for col in range(GRID_W):
             for b in range(BOX):
-                box = BoundBox(CLASS)
+                box = BoundBox()
 
                 # first 5 weights for x, y, w, h and confidence
-                box.x, box.y, box.w, box.h, box.c = netout[0, row, col, b, :5]
+                box.x, box.y, box.w, box.h, confidence = netout[0, row, col, b, :5]
 
-                box.x = (col + sigmoid(box.x)) / GRID_W
-                box.y = (row + sigmoid(box.y)) / GRID_H
-                box.w = ANCHORS[2 * b + 0] * np.exp(box.w) / GRID_W
-                box.h = ANCHORS[2 * b + 1] * np.exp(box.h) / GRID_H
-                box.c = sigmoid(box.c)
+                box.x = ((col + sigmoid(box.x)) / GRID_W) * NORM_W
+                box.y = ((row + sigmoid(box.y)) / GRID_H) * NORM_H
+                box.w = (ANCHORS[2 * b + 0] * np.exp(box.w) / GRID_W) * NORM_W
+                box.h = (ANCHORS[2 * b + 1] * np.exp(box.h) / GRID_H) * NORM_H
+                confidence = sigmoid(confidence)
 
                 # last 20 weights for class likelihoods
                 classes = netout[0, row, col, b, 5:]
-                box.probs = softmax(classes) * box.c
+                probabilities = softmax(classes) * confidence
+
+                # find class with max probability
+                max_indx = np.argmax(probabilities)
+                box.prob = probabilities[max_indx]
+                box.cn = class_names[max_indx]
 
                 # filter out boxes that don't meet threshold
-                box.probs *= box.probs > prob_threshold
-                boxes.append(box)
+                if box.prob > prob_threshold:
+                    boxes.append(box)
 
-    # suppress non-maximal boxes
-    for c in range(CLASS):
-        sorted_indices = list(reversed(np.argsort([box.probs[c] for box in boxes])))
+    return boxes
 
-        for i in range(len(sorted_indices)):
-            index_i = sorted_indices[i]
 
-            if boxes[index_i].probs[c] == 0:
-                continue
-            else:
-                for j in range(i + 1, len(sorted_indices)):
-                    index_j = sorted_indices[j]
+def non_maximal_suppresion(boxes, nms_threshold):
+    """
+    :param boxes:
+    :param nms_threshold:
+    :return nms_boxes: array of class BoundBox
+    """
 
-                    if boxes[index_i].iou(boxes[index_j]) >= nms_threshold:
-                        boxes[index_j].probs[c] = 0
+    # suppress non-maximal boxes based on IoU threshold
+    for i in range(len(boxes)):
+        if boxes[i].prob == 0:
+            continue
+        else:
+            for j in range(i + 1, len(boxes)):
+                if boxes[i].iou(boxes[j]) >= nms_threshold:
+                    boxes[j].prob = 0
 
-    # draw the boxes using a threshold
-    bboxes = []
-    for box in boxes:
-        max_indx = np.argmax(box.probs)
-        max_prob = box.probs[max_indx]
+    # only return those that haven't been suppressed
+    nms_boxes = [b for b in boxes if b.prob > 0]
 
-        if max_prob > prob_threshold:
-            bboxes.append([class_names[max_indx], (box.x*NORM_W, box.y*NORM_H, box.w*NORM_W, box.h*NORM_H), max_prob])
-
-    return bboxes
+    return nms_boxes
 
 
 def sigmoid(x):
