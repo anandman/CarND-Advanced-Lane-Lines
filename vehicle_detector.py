@@ -41,8 +41,12 @@ CROP_YMAX = 719
 CROP_XMIN = 0
 CROP_XMAX = 1279
 SCORE_THRESHOLD = 0.5
-NMS_THRESHOLD = 0.2
+NMS_THRESHOLD = 0.5
 CLASSES_TO_SHOW = ['bus', 'car', 'motorbike', 'truck']
+
+# declare globals
+# declare it as empty array of objects to set the initial size
+_global_last_boxes = np.empty(5, dtype=object)
 
 
 def init_yad2k(keras_version, model_file, classes_file, anchors_file):
@@ -127,8 +131,8 @@ def init_keras(weights_file, classes_file, anchors_file):
     return model, classes, anchors
 
 
-def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=False, returnOverlay=False,
-                          debug=False, display=False):
+def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors,
+                          isVideo=False, returnOverlay=False, debug=False, display=False):
     """
     takes in an RGB image, tries to detect vehicles, and augments image with visualization of detected vehicles
     :param img:
@@ -176,14 +180,30 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors, isVideo=
     # run image through model
     netout = model.predict(image_data)
 
+    global _global_last_boxes
+
     # extract bounding boxes and filter based on thresholds and classes
     pboxes = prediction_bboxes(netout, classes, anchors, SCORE_THRESHOLD)
+
+    # do non-maximal suppression (NMS) to eliminate similar boxes
     boxes = non_maximal_suppresion(pboxes, NMS_THRESHOLD)
+
+    # we also use NMS to average across frames if it's a video
+    if isVideo:
+        # push the current pboxes onto front of queue
+        # since we defined the np.array with a certain size,
+        # the nth set of pboxes effectively drops off the back of queue
+        # np.roll is computationally faster than using deque's, even though we want FIFO and nor ring buffer
+        _global_last_boxes = np.roll(_global_last_boxes, 1, axis=0)
+        _global_last_boxes[0] = boxes
+        fboxes = np.hstack(_global_last_boxes.flat)  # flatten into 1D array of BoundBox boxes
+        fboxes = fboxes[fboxes != np.array(None)]  # remove None from queue if any
+        boxes = non_maximal_suppresion(fboxes, NMS_THRESHOLD)
 
     for box in boxes:
         # only show if prediction is in CLASSES_TO_SHOW
         if box.cn not in CLASSES_TO_SHOW:
-            print("[INFO] detected class ", box.cn)
+            if debug: print("[INFO] detected class", box.cn)
             continue
 
         label = '{} {:.2f}'.format(box.cn, box.prob)
