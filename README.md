@@ -160,11 +160,19 @@ The vehicle detection module [vehicle_detector.py](vehicle_detector.py) consists
 
 - load the camera distortion coefficients
 - correct for camera distortion in images or incoming video frames
+- crop image to road area
 - resize image to fit Tiny Yolo model for VOC datasets
 - run image through Tiny Yolo model and return predictions
 - convert predictions into bounding boxes using confidence thresholds
+- use non-maximal suppression (NMS) to find one bounding box per vehicle
+- "average" each vehicle's bounding box across last 5 frames of a video using a NumPy-based queue
 - overlay visual display of bounding boxes onto original image
 - output the image or video
+
+The crop area and the confidence and NMS threshold are variables defined at the top of the file.
+The crop area was derived by looking at only the road area.
+The confidence score threshold was validated empirically but better than 50% also seems like a natural point.
+The NMS threshold was derived empirically to balance separating out multiple close cars while not falsely detecting the same car twice.
 
 A test image and output are shown below.
 
@@ -190,4 +198,4 @@ Though this pipeline works well for the test images and the first sample video, 
 - &#x1F6E3; The interactive iPython tuner for Sobel threshold parameters is quite useful but limited and cumbersome. In the future, we could implement a Tkinter-based GUI to tune those and many other parameters and show the results real-time.
 - &#x1F6E3; Overall, the OpenCV based implementation will have lots of limits as new scenarios are found. A much better approach would be to create a deep learning neural network to handle these and new situations.
 - &#x1F697; The speed is still very slow, in seconds/iteration on a CPU, even though this is just inference. This should be much faster.
-- &#x1F697; There are still some false positives, for example, the occasional traffic billboard. This should be reduceable by taking the existing weights but optimizing based on the [Udacity datasets](https://github.com/udacity/self-driving-car/tree/master/annotations).
+- &#x1F697; Speed and accuracy should be improvable by taking the existing weights but optimizing based on the [Udacity datasets](https://github.com/udacity/self-driving-car/tree/master/annotations).
