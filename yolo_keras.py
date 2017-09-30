@@ -11,6 +11,34 @@ class BoundBox:
         self.prob = 0.
         self.cn = "none"
 
+    def __add__(self, other):
+        assert self.cn == other.cn, "can't add BoundBox objects of different class names"
+        sx1 = self.x - self.w / 2
+        sx2 = self.x + self.w / 2
+        sy1 = self.y - self.h / 2
+        sy2 = self.y + self.h / 2
+        ox1 = other.x - other.w / 2
+        ox2 = other.x + other.w / 2
+        oy1 = other.y - other.h / 2
+        oy2 = other.y + other.h / 2
+        xmin = min(sx1, ox1)
+        xmax = max(sx2, ox2)
+        ymin = min(sy1, oy1)
+        ymax = max(sy2, oy2)
+        box = BoundBox()
+        box.w = xmax - xmin
+        box.h = ymax - ymin
+        box.x = xmin + box.w / 2
+        box.y = ymin + box.h / 2
+        box.prob = max(self.prob, other.prob)
+        box.cn = self.cn
+        return box
+
+    def __str__(self):
+        return "[x, y] = [" + str(self.x) + ", " + str(self.y) + "] [w, h] = [" + str(self.w) + ", " + str(self.h) + "] prob = " + str(self.prob) + " cn = " + str(self.cn)
+
+    __repr__ = __str__
+
     def iou(self, box):
         intersection = self.intersect(box)
         union = self.w * self.h + box.w * box.h - intersection
@@ -134,7 +162,7 @@ def prediction_bboxes(netout, class_names, anchors, prob_threshold):
     return boxes
 
 
-def non_maximal_suppresion(boxes, nms_threshold):
+def non_maximal_suppression(boxes, nms_threshold):
     """
     :param boxes:
     :param nms_threshold:
@@ -159,6 +187,34 @@ def non_maximal_suppresion(boxes, nms_threshold):
     nms_boxes = [b for b in boxes if b.prob > 0]
 
     return nms_boxes
+
+
+def average_boxes(boxes, nms_threshold):
+    """
+    return average box of all the boxes
+    :param boxes:
+    :param nms_threshold:
+    :return avg_boxes:
+    """
+
+    box_added = np.zeros(len(boxes), dtype=np.int8)
+    for i in range(len(boxes)):
+        if boxes[i].prob == 0 or box_added[i]:
+            continue
+        else:
+            for j in range(i + 1, len(boxes)):
+                if boxes[j].prob == 0 or box_added[j]:
+                    continue
+                elif boxes[i].iou(boxes[j]) >= nms_threshold:
+                    if boxes[i].cn == boxes[j].cn:
+                        # "add" these two boxes since they are likely the same object
+                        boxes[i] = boxes[i] + boxes[j]
+                        box_added[j] = 1    # indicate that this box has been added to another box to ignore it later
+
+    # only return the boxes that have been "added"
+    avg_boxes = [boxes[i] for i in range(len(boxes)) if boxes[i].prob > 0 and box_added[i] < 1]
+
+    return avg_boxes
 
 
 def sigmoid(x):
