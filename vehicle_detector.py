@@ -35,18 +35,84 @@ import ctypes
 from yolo_keras import *
 
 
-# some parameters to use to filter bounding boxes
+# some parameters to use to crop and filter bounding boxes
 CROP_YMIN = 300
 CROP_YMAX = 719
 CROP_XMIN = 0
 CROP_XMAX = 1279
 SCORE_THRESHOLD = 0.5
-NMS_THRESHOLD = 0.5
+NMS_THRESHOLD = 0.4
 CLASSES_TO_SHOW = ['bus', 'car', 'motorbike', 'truck']
 
 # declare globals
 # declare it as empty array of objects to set the initial size
 _global_last_boxes = np.empty(5, dtype=object)
+
+
+def draw_boxes(boxes, img, model_size, crop_rect, color=(255, 255, 255), debug=False):
+    """
+    draws boxes onto an img after resizing from model coords to full image coords
+    :param boxes:
+    :param img:
+    :param model_size:
+    :param crop_rect:
+    :param color:
+    :param debug:
+    :return retimg:
+    """
+
+    retimg = img.copy()
+    [xmin, xmax] = crop_rect[0]
+    [ymin, ymax] = crop_rect[1]
+    crop_w = xmax - xmin
+    crop_h = ymax - ymin
+    [model_h, model_w] = model_size
+    [img_h, img_w] = img.shape[0:2]
+
+    for box in boxes:
+        # only show if prediction is in CLASSES_TO_SHOW
+        if box.cn not in CLASSES_TO_SHOW:
+            if debug: print("[INFO] detected class", box.cn)
+            continue
+
+        label = '{} {:.2f}'.format(box.cn, box.prob)
+
+        # convert bounding box to coordinates
+        left = (box.x - box.w / 2)
+        right = (box.x + box.w / 2)
+        top = (box.y - box.h / 2)
+        bottom = (box.y + box.h / 2)
+
+        # scale up boxes to cropped image size
+        left *= crop_w / model_w
+        right *= crop_w / model_w
+        top *= crop_h / model_h
+        bottom *= crop_h / model_h
+
+        # shift boxes from cropped to original image
+        left += xmin
+        right += xmin
+        top += ymin
+        bottom += ymin
+
+        top = max(0, np.floor(top + 0.5).astype('int32'))
+        left = max(0, np.floor(left + 0.5).astype('int32'))
+        bottom = min(img_h, np.floor(bottom + 0.5).astype('int32'))
+        right = min(img_w, np.floor(right + 0.5).astype('int32'))
+
+        # draw rectangle
+        cv2.rectangle(retimg, (left, top), (right, bottom), color=color, thickness=2, lineType=cv2.LINE_AA)
+
+        # write label
+        fontface = cv2.FONT_HERSHEY_SIMPLEX
+        fontscale = 0.5
+        fontthickness = 1
+        textsize, _ = cv2.getTextSize(label, fontface, fontscale, fontthickness)
+        cv2.putText(retimg, label, (left + 2, top + textsize[1] + 2),
+                    fontface, fontScale=fontscale, color=color,
+                    thickness=fontthickness, lineType=cv2.LINE_AA)
+
+    return retimg
 
 
 def init_yad2k(keras_version, model_file, classes_file, anchors_file):
@@ -186,7 +252,7 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors,
     pboxes = prediction_bboxes(netout, classes, anchors, SCORE_THRESHOLD)
 
     # do non-maximal suppression (NMS) to eliminate similar boxes
-    boxes = non_maximal_suppresion(pboxes, NMS_THRESHOLD)
+    boxes = non_maximal_suppression(pboxes, NMS_THRESHOLD)
 
     # we also use NMS to average across frames if it's a video
     if isVideo:
@@ -196,60 +262,22 @@ def detect_vehicles_keras(img, fps, mtx, dist, model, classes, anchors,
         # np.roll is computationally faster than using deque's, even though we want FIFO and nor ring buffer
         _global_last_boxes = np.roll(_global_last_boxes, 1, axis=0)
         _global_last_boxes[0] = boxes
-        fboxes = np.hstack(_global_last_boxes.flat)  # flatten into 1D array of BoundBox boxes
+        fboxes = np.hstack(_global_last_boxes.flat)    # flatten into 1D array of BoundBox boxes
         fboxes = fboxes[fboxes != np.array(None)]  # remove None from queue if any
-        boxes = non_maximal_suppresion(fboxes, NMS_THRESHOLD)
+        boxes = average_boxes(fboxes, NMS_THRESHOLD)
 
-    for box in boxes:
-        # only show if prediction is in CLASSES_TO_SHOW
-        if box.cn not in CLASSES_TO_SHOW:
-            if debug: print("[INFO] detected class", box.cn)
-            continue
-
-        label = '{} {:.2f}'.format(box.cn, box.prob)
-
-        # convert bounding box to coordinates
-        left = (box.x - box.w / 2)
-        right = (box.x + box.w / 2)
-        top = (box.y - box.h / 2)
-        bottom = (box.y + box.h / 2)
-
-        # scale up boxes to cropped image size
-        left *= dst_cropped.shape[1] / model_image_size[0]
-        right *= dst_cropped.shape[1] / model_image_size[0]
-        top *= dst_cropped.shape[0] / model_image_size[1]
-        bottom *= dst_cropped.shape[0] / model_image_size[1]
-
-        # shift boxes from cropped to original image
-        left += CROP_XMIN
-        right += CROP_XMIN
-        top += CROP_YMIN
-        bottom += CROP_YMIN
-
-        top = max(0, np.floor(top + 0.5).astype('int32'))
-        left = max(0, np.floor(left + 0.5).astype('int32'))
-        bottom = min(dst.shape[0], np.floor(bottom + 0.5).astype('int32'))
-        right = min(dst.shape[1], np.floor(right + 0.5).astype('int32'))
-
-        # draw rectangle
-        cv2.rectangle(box_img, (left, top), (right, bottom), color=(255, 255, 255), thickness=2, lineType=cv2.LINE_AA)
-
-        # write label
-        fontface = cv2.FONT_HERSHEY_SIMPLEX
-        fontscale = 0.5
-        fontthickness = 1
-        textsize, _ = cv2.getTextSize(label, fontface, fontscale, fontthickness)
-        cv2.putText(box_img, label, (left + 2, top + textsize[1] + 2),
-                    fontface, fontScale=fontscale, color=(255, 255, 255),
-                    thickness=fontthickness, lineType=cv2.LINE_AA)
+    if isVideo and debug:
+        box_img = draw_boxes(fboxes, box_img, model_image_size, ((CROP_XMIN, CROP_XMAX), (CROP_YMIN, CROP_YMAX)),
+                             color=(255, 0, 0))
+    box_img = draw_boxes(boxes, box_img, model_image_size, ((CROP_XMIN, CROP_XMAX), (CROP_YMIN, CROP_YMAX)))
 
     retimg = box_img
 
     if debug or display:
         # display debug images
-        debug_img = debug_images(img, dst, box_img, title='debug',
-                                 captions=("original", "undistorted", "annotated"),
-                                 scale=0.5, hstack=2, display=display, savefile="output_images/pipeline_images.png")
+        debug_img = debug_images(dst, box_img, title='debug',
+                                 captions=("undistorted", "annotated"),
+                                 scale=0.5, hstack=1, display=display, savefile="output_images/vd/pipeline_images.png")
         if debug:
             retimg = debug_img
 
@@ -352,7 +380,7 @@ def detect_vehicles_yad2k(img, fps, mtx, dist, sess, model, classes, anchors, is
         # display debug images
         debug_img = debug_images(img, dst, box_img, title='debug',
                                  captions=("original", "undistorted", "annotated"),
-                                 scale=0.5, hstack=2, display=display, savefile="output_images/pipeline_images.png")
+                                 scale=0.5, hstack=2, display=display, savefile="output_images/vd/pipeline_images.png")
         if debug:
             retimg = debug_img
 
@@ -454,7 +482,7 @@ def detect_vehicles_darknet(img, fps, mtx, dist, net, meta, isVideo=False, debug
         # display debug images
         debug_img = debug_images(img, dst, box_img, title='debug',
                                  captions=("original", "undistorted", "annotated"),
-                                 scale=0.5, hstack=2, display=display, savefile="output_images/pipeline_images.png")
+                                 scale=0.5, hstack=2, display=display, savefile="output_images/vd/pipeline_images.png")
         if debug:
             retimg = debug_img
 
@@ -524,6 +552,9 @@ if __name__ == "__main__":
             # assume it's a video
             clip = VideoFileClip(infile)
             video = True
+
+        # reset global between files
+        _global_last_boxes = np.empty(5, dtype=object)
 
         # go through each frame in image (only 1 frame, obviously) or video
         if args.method == 'yad2k':
